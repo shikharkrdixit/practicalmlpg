@@ -1,0 +1,114 @@
+---
+title: "PeerGraded"
+author: "Shikhar"
+date: "01/10/2020"
+output: 
+    html_document:
+      keep_md: yes
+---
+## One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+#### The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+
+#### The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+#### The data for this project come from this source:
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. 
+
+
+### Required Libraries
+
+Loading Libraries
+
+
+```{r}
+library(caret)
+library(rpart); library(rpart.plot)
+library(rattle)
+library(randomForest)
+```
+
+### Setting up the Files,
+Here we will download and read the training set and test set.
+
+```{r}
+ download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+             destfile = "./trainingfile.csv")
+training <- read.csv("./trainingfile.csv",na.strings=c("NA","#DIV/0!", ""))
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",destfile = "./testfile.csv")
+test <- read.csv("./testfile.csv",na.strings=c("NA","#DIV/0!", ""))
+names(training)
+```
+
+
+## Cleaning the data set.
+Removing NA values and cleaning the dataset.
+```{r}
+training <- training[,colSums(is.na(training))==0]
+test <- test[,colSums(is.na(test))==0]
+dim(training)
+training <- training[,-c(1:7)]
+test <- test[,-c(1:7)]
+
+```
+## Seperating test set and training set from Training set given.
+
+Here, we will be seperating the test set and training set from the training set given to us.
+
+```{r}
+set.seed(1-10-2020)
+traintraining <- createDataPartition(y = training$classe,p = 0.65,list = FALSE)
+testtraining <- training[-traintraining,]
+traintraining <- training[traintraining,]
+
+dim(testtraining)
+dim(traintraining)
+```
+
+
+## The frequency of each Level present in "classe" variable of the data set.
+
+```{r}
+plot(as.factor(traintraining$classe),col = "dark green",
+     xlab="Levels",ylab = "Counts",main="The Presence of Each level in the Data-Set",ylim = c(-1,5000))
+traintraining$classe <- as.factor(traintraining$classe)
+testtraining$classe <- as.factor(testtraining$classe)
+```
+Therefore, the graph tells us presencr of each level in Data set and their frequency.
+
+## 1.Decision Tree
+
+```{r}
+dsc <- rpart(classe~.,data = traintraining,method="class",control = rpart.control(minsplit = 4959,maxdepth = 9))
+fancyRpartPlot(dsc)
+predictionsA <- predict(dsc,testtraining, type = "class")
+confusionMatrix(predictionsA,testtraining$classe)
+```
+
+
+## 2. Random Forest
+```{r}
+rnf <- randomForest(classe~.,data = traintraining)
+predictionsB1 <- predict(rnf,testtraining, type = "class")
+testtraining$classe <- as.factor(testtraining$classe)
+plot(rnf)
+confusionMatrix(predictionsB1,testtraining$classe)
+```
+So, the accuracy of Random Forest is better here.
+
+## Final Prediciton!
+The final prediction will be based upon the Random Forest algorithm because it had the better accuracy here.
+
+```{r}
+finalpred <- predict(rnf,test,type="class")
+finalpred
+```
